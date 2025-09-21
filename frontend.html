@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConditionalUNet Polygon Coloring</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .status-bar {
+            padding: 15px 30px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .status-dot.connected {
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .upload-section, .result-section {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #4f46e5;
+            background: #f1f5f9;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .file-upload-area:hover {
+            border-color: #4f46e5;
+            background: #f8fafc;
+        }
+
+        .file-upload-area.dragover {
+            border-color: #4f46e5;
+            background: #ede9fe;
+        }
+
+        .upload-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 15px;
+            opacity: 0.5;
+        }
+
+        .color-selection {
+            margin: 20px 0;
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .color-option {
+            padding: 15px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 500;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 70px;
+        }
+
+        .color-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: #94a3b8;
+        }
+
+        .color-option.selected {
+            border-color: #4f46e5;
+            background: #ede9fe;
+            color: #4f46e5;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+        }
+
+        .color-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+        }
+
+        .color-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: capitalize;
+            color: #475569;
+        }
+
+        .color-option.selected .color-name {
+            color: #4f46e5;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .image-preview, .result-image {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin: 15px 0;
+            background: white;
+            padding: 10px;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid #fecaca;
+        }
+
+        .success {
+            background: #f0fdf4;
+            color: #16a34a;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid #bbf7d0;
+        }
+
+        .batch-mode {
+            margin-top: 25px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .batch-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #cbd5e1;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #4f46e5;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(26px);
+        }
+
+        .multiple-files {
+            display: none;
+        }
+
+        .multiple-files.active {
+            display: block;
+        }
+
+        .file-list {
+            margin: 15px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .remove-file {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .batch-results {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .batch-result-item {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .batch-result-item h4 {
+            margin-bottom: 10px;
+            color: #1e293b;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+
+            .color-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .status-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        .download-btn {
+            background: #10b981;
+            margin-top: 10px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        .download-btn:hover {
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 ConditionalUNet Polygon Coloring</h1>
+            <p>Upload your polygon outlines and watch AI bring them to life with vibrant colors</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Checking connection...</span>
+            </div>
+            <div class="status-indicator">
+                <span>🖥️ Device: <span id="deviceInfo">Loading...</span></span>
+            </div>
+            <div class="status-indicator">
+                <span>🎨 Colors: <span id="colorCount">Loading...</span></span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <h2 class="section-title">
+                    📤 Upload & Configure
+                </h2>
+
+                <div class="file-upload-area" id="fileUpload">
+                    <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <h3>Drop your polygon image here</h3>
+                    <p>Or click to browse files</p>
+                    <p style="font-size: 0.8rem; opacity: 0.6; margin-top: 10px;">PNG, JPG, JPEG supported</p>
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;" multiple>
+                </div>
+
+                <div id="imagePreview"></div>
+
+                <div class="color-selection">
+                    <h3 style="margin-bottom: 15px;">🎨 Select Color</h3>
+                    <div class="color-grid" id="colorGrid">
+                        <!-- Colors will be loaded dynamically -->
+                    </div>
+                </div>
+
+                <div class="batch-mode">
+                    <div class="batch-toggle">
+                        <div class="toggle-switch" id="batchToggle">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <label>Batch Processing Mode</label>
+                    </div>
+                    
+                    <div class="multiple-files" id="multipleFiles">
+                        <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 15px;">
+                            Upload multiple images and assign colors to each one
+                        </p>
+                        <div class="file-list" id="fileList"></div>
+                    </div>
+                </div>
+
+                <button class="btn" id="colorizeBtn" disabled>
+                    🎨 Colorize Polygon
+                </button>
+            </div>
+
+            <div class="result-section">
+                <h2 class="section-title">
+                    ✨ Result
+                </h2>
+
+                <div id="resultArea">
+                    <div style="text-align: center; padding: 60px 20px; color: #64748b;">
+                        <svg width="80" height="80" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-bottom: 20px; opacity: 0.3;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <p>Your colorized polygon will appear here</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000';
+        
+        let selectedColor = 'red';
+        let selectedFiles = [];
+        let isBatchMode = false;
+        let supportedColors = {};
+
+        // DOM elements
+        const fileUpload = document.getElementById('fileUpload');
+        const fileInput = document.getElementById('fileInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const colorGrid = document.getElementById('colorGrid');
+        const colorizeBtn = document.getElementById('colorizeBtn');
+        const resultArea = document.getElementById('resultArea');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const deviceInfo = document.getElementById('deviceInfo');
+        const colorCount = document.getElementById('colorCount');
+        const batchToggle = document.getElementById('batchToggle');
+        const multipleFiles = document.getElementById('multipleFiles');
+        const fileList = document.getElementById('fileList');
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAPIStatus();
+            loadSupportedColors();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // File upload
+            fileUpload.addEventListener('click', () => fileInput.click());
+            fileUpload.addEventListener('dragover', handleDragOver);
+            fileUpload.addEventListener('drop', handleDrop);
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // Batch mode toggle
+            batchToggle.addEventListener('click', toggleBatchMode);
+
+            // Colorize button
+            colorizeBtn.addEventListener('click', handleColorize);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            fileUpload.classList.add('dragover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            fileUpload.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+            if (files.length > 0) {
+                handleFiles(files);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            if (isBatchMode) {
+                selectedFiles = files;
+                displayFileList();
+                updateColorizeButton();
+            } else {
+                if (files.length > 0) {
+                    selectedFiles = [files[0]];
+                    displayImagePreview(files[0]);
+                    updateColorizeButton();
+                }
+            }
+        }
+
+        function displayImagePreview(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.innerHTML = `
+                    <h4>Preview:</h4>
+                    <img src="${e.target.result}" alt="Preview" class="image-preview">
+                    <p><strong>File:</strong> ${file.name}</p>
+                    <p><strong>Size:</strong> ${(file.size / 1024).toFixed(1)} KB</p>
+                `;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function displayFileList() {
+            fileList.innerHTML = selectedFiles.map((file, index) => `
+                <div class="file-item">
+                    <div>
+                        <strong>${file.name}</strong>
+                        <span style="font-size: 0.8rem; color: #64748b;">
+                            (${(file.size / 1024).toFixed(1)} KB)
+                        </span>
+                    </div>
+                    <button class="remove-file" onclick="removeFile(${index})">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            displayFileList();
+            updateColorizeButton();
+        }
+
+        function toggleBatchMode() {
+            isBatchMode = !isBatchMode;
+            batchToggle.classList.toggle('active', isBatchMode);
+            multipleFiles.classList.toggle('active', isBatchMode);
+            
+            // Reset selections
+            selectedFiles = [];
+            imagePreview.innerHTML = '';
+            fileList.innerHTML = '';
+            updateColorizeButton();
+            
+            // Update file input
+            fileInput.multiple = isBatchMode;
+        }
+
+        async function checkAPIStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                if (data.status === 'healthy') {
+                    statusDot.classList.add('connected');
+                    statusText.textContent = 'API Connected';
+                    deviceInfo.textContent = data.device;
+                } else {
+                    statusText.textContent = 'Model not loaded';
+                }
+            } catch (error) {
+                statusText.textContent = 'API Disconnected';
+                console.error('API health check failed:', error);
+            }
+        }
+
+        async function loadSupportedColors() {
+            try {
+                const response = await fetch(`${API_BASE}/colors`);
+                const data = await response.json();
+                supportedColors = data.supported_colors;
+                colorCount.textContent = data.total_colors;
+                displayColorOptions();
+            } catch (error) {
+                console.error('Failed to load colors:', error);
+                colorCount.textContent = 'Failed to load';
+                // Fallback to default colors if API fails
+                displayDefaultColors();
+            }
+        }
+
+        function displayColorOptions() {
+            const colorMap = {
+                'red': '#ef4444',
+                'blue': '#3b82f6',
+                'green': '#10b981',
+                'yellow': '#f59e0b',
+                'purple': '#8b5cf6',
+                'orange': '#f97316',
+                'cyan': '#06b6d4',
+                'magenta': '#ec4899'
+            };
+
+            // Get color names from the API response or use default
+            const colorsToDisplay = Object.keys(supportedColors).length > 0 
+                ? Object.keys(supportedColors).map(idx => supportedColors[idx])
+                : Object.keys(colorMap);
+
+            colorGrid.innerHTML = colorsToDisplay.map(colorName => `
+                <div class="color-option ${colorName === selectedColor ? 'selected' : ''}" 
+                     data-color="${colorName}" onclick="selectColor('${colorName}')">
+                    <div class="color-dot" style="background-color: ${colorMap[colorName] || '#666'}"></div>
+                    <span class="color-name">${colorName}</span>
+                </div>
+            `).join('');
+        }
+
+        function displayDefaultColors() {
+            const defaultColors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'cyan', 'magenta'];
+            const colorMap = {
+                'red': '#ef4444',
+                'blue': '#3b82f6',
+                'green': '#10b981',
+                'yellow': '#f59e0b',
+                'purple': '#8b5cf6',
+                'orange': '#f97316',
+                'cyan': '#06b6d4',
+                'magenta': '#ec4899'
+            };
+
+            colorGrid.innerHTML = defaultColors.map(colorName => `
+                <div class="color-option ${colorName === selectedColor ? 'selected' : ''}" 
+                     data-color="${colorName}" onclick="selectColor('${colorName}')">
+                    <div class="color-dot" style="background-color: ${colorMap[colorName]}"></div>
+                    <span class="color-name">${colorName}</span>
+                </div>
+            `).join('');
+        }
+
+        function selectColor(color) {
+            selectedColor = color;
+            document.querySelectorAll('.color-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            const selectedOption = document.querySelector(`[data-color="${color}"]`);
+            if (selectedOption) {
+                selectedOption.classList.add('selected');
+            }
+            updateColorizeButton();
+        }
+
+        function updateColorizeButton() {
+            const hasFiles = selectedFiles.length > 0;
+            const hasColor = selectedColor;
+            colorizeBtn.disabled = !(hasFiles && hasColor);
+        }
+
+        async function handleColorize() {
+            if (selectedFiles.length === 0) return;
+
+            colorizeBtn.disabled = true;
+            showLoading();
+
+            try {
+                if (isBatchMode) {
+                    await handleBatchColorize();
+                } else {
+                    await handleSingleColorize();
+                }
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                colorizeBtn.disabled = false;
+            }
+        }
+
+        async function handleSingleColorize() {
+            const formData = new FormData();
+            formData.append('file', selectedFiles[0]);
+            formData.append('color', selectedColor);
+
+            const response = await fetch(`${API_BASE}/colorize`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Colorization failed');
+            }
+
+            const data = await response.json();
+            showResult(data);
+        }
+
+        async function handleBatchColorize() {
+            const formData = new FormData();
+            
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+            
+            // For batch mode, use the same color for all images
+            selectedFiles.forEach(() => {
+                formData.append('colors', selectedColor);
+            });
+
+            const response = await fetch(`${API_BASE}/colorize-true-batch`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Batch colorization failed');
+            }
+
+            const data = await response.json();
+            showBatchResults(data);
+        }
+
+        function showLoading() {
+            resultArea.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <span>Processing your image...</span>
+                </div>
+            `;
+        }
+
+        function showResult(data) {
+            resultArea.innerHTML = `
+                <div class="success">
+                    ✅ ${data.message}
+                </div>
+                <div style="text-align: center;">
+                    <h4>Colorized Result:</h4>
+                    <img src="${data.colored_image}" alt="Colorized Result" class="result-image">
+                    <button class="btn download-btn" onclick="downloadImage('${data.colored_image}', 'colorized_${data.color_applied}.png')">
+                        📥 Download Image
+                    </button>
+                </div>
+                <div style="margin-top: 15px; font-size: 0.9rem; color: #64748b;">
+                    <p><strong>Original:</strong> ${data.input_info.filename}</p>
+                    <p><strong>Color Applied:</strong> ${data.color_applied}</p>
+                    <p><strong>Processing Size:</strong> ${data.input_info.processed_size}</p>
+                </div>
+            `;
+        }
+
+        function showBatchResults(data) {
+            const resultsHTML = data.results.map((result, index) => `
+                <div class="batch-result-item">
+                    <h4>${result.filename} - ${result.color_applied}</h4>
+                    <img src="${result.colored_image}" alt="Result" class="result-image">
+                    <button class="btn download-btn" onclick="downloadImage('${result.colored_image}', 'colorized_${result.filename}')">
+                        📥 Download
+                    </button>
+                </div>
+            `).join('');
+
+            resultArea.innerHTML = `
+                <div class="success">
+                    ✅ ${data.message}
+                </div>
+                <div class="batch-results">
+                    ${resultsHTML}
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            resultArea.innerHTML = `
+                <div class="error">
+                    ❌ Error: ${message}
+                </div>
+            `;
+        }
+
+        function downloadImage(dataUrl, filename) {
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Refresh API status every 30 seconds
+        setInterval(checkAPIStatus, 30000);
+    </script>
+</body>
+</html>
