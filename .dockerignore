@@ -1,0 +1,13 @@
+# Git
+.git/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# IDE / OS specific
+.idea/
+.vscode/
+.DS_Store
