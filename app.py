@@ -10,7 +10,7 @@ import logging
 from typing import List
 from schema.user_input import preprocess_image
 from schema.output import postprocess_output, tensor_to_base64
-from UNet import UNet 
+from model.UNet import UNet 
 
 logger = logging.getLogger(__name__)
 
