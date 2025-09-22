@@ -21,12 +21,16 @@ exports.handler = async (event, context) => {
     '?' + new URLSearchParams(event.queryStringParameters).toString() : '';
   const targetUrl = `http://13.48.123.148:8000${apiPath}${queryString}`;
 
-  console.log('Proxying request to:', targetUrl);
+  console.log('=== PROXY DEBUG ===');
+  console.log('Original path:', event.path);
+  console.log('Extracted API path:', apiPath);
+  console.log('Target URL:', targetUrl);
   console.log('Method:', event.httpMethod);
+  console.log('Headers:', event.headers);
 
   try {
-    // Import node-fetch (works with newer Node.js versions)
-    const fetch = (await import('node-fetch')).default;
+    // Use built-in fetch (available in Node.js 18+)
+    // No import needed as fetch is globally available
 
     const options = {
       method: event.httpMethod,
